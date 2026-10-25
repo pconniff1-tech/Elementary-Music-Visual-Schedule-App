@@ -1,0 +1,28 @@
+# Local Environment Secrets
+.env*
+
+# Dependency Directory
+# (Never commit this; npm install rebuilds it from package.json)
+node_modules/
+
+# SQLite Database Files
+# (Keeps your local student/inventory data out of your public repository)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+
+# Electron Builder Output
+# (Excludes your compiled universal installers and executables)
+dist/
+out/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

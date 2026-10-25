@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' schedule-asset:; media-src 'self' https: http:; style-src 'self'; script-src 'self'; frame-src https: http:;">
+  <title>Music Visual Schedule</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <button id="gear-btn" class="gear-menu-trigger" aria-label="Open setup">⚙</button>
+
+    <div class="stage">
+      <div class="stage-content">
+        <div id="stage-placeholder" class="stage-placeholder">
+          <img id="stage-image" class="stage-image" alt="" hidden>
+          <p id="stage-hint">Tap the gear to build a schedule.</p>
+        </div>
+        <iframe id="presentation-frame" title="Presentation" referrerpolicy="no-referrer" hidden
+                allow="fullscreen; encrypted-media; picture-in-picture"></iframe>
+        <div id="audio-resource-player" class="audio-resource-player" hidden>
+          <img id="audio-stage-graphic" class="audio-stage-graphic" alt="">
+          <audio id="native-audio-element" aria-label="Activity audio player" controls
+                 controlslist="nodownload noplaybackrate noremoteplayback" disableremoteplayback>
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      </div>
+      <h1 id="stage-title">Welcome</h1>
+    </div>
+
+    <div id="bottom-row-container" class="bottom-row"></div>
+  </div>
+
+  <div id="setup-modal" class="modal-overlay" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>App Configuration &amp; Visual Schedule Builder</h2>
+        <button id="close-modal-btn">✕ Save &amp; Close</button>
+      </div>
+
+      <div id="modal-error" class="modal-error" role="alert" hidden></div>
+
+      <div class="modal-body">
+        <div class="schedule-selector-panel">
+          <h3>1. Select Classroom Routine</h3>
+          <select id="class-select-dropdown" aria-label="Classroom routine"></select>
+          <label>Class name <input id="class-name-input" type="text" maxlength="100"></label>
+          <label>Grade / group <input id="class-grade-input" type="text" maxlength="50"></label>
+          <button id="new-class-btn">+ Create New Class Profile</button>
+          <button id="delete-class-btn" class="danger">Delete This Class</button>
+          <button id="reset-progress-btn">Reset Checkmarks</button>
+
+          <h3>App Updates</h3>
+          <p id="app-version" class="update-text"></p>
+          <p id="update-status" class="update-text" role="status" aria-live="polite"></p>
+          <button id="check-update-btn">Check for Updates</button>
+          <button id="install-update-btn" hidden>Restart &amp; Install Update</button>
+        </div>
+
+        <div class="sequence-builder-panel">
+          <h3>2. Edit Schedule Steps</h3>
+          <div id="item-sequence-list"></div>
+          <button id="add-step-btn">+ Add Sequence Step Slot</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="schedule-utils.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
+

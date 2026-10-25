@@ -1,0 +1,73 @@
+{
+  "name": "music-visual-schedule",
+  "version": "1.0.0",
+  "description": "Customizable visual schedule for ASD and General Music Classrooms",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/schedule-utils.test.js",
+    "test:db": "node -e \"process.env.ELECTRON_RUN_AS_NODE='1';const r=require('child_process').spawnSync(require('electron'),['test/db.check.js'],{stdio:'inherit',env:process.env});process.exit(r.status)\"",
+    "postinstall": "electron-builder install-app-deps",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build:local": "electron-builder --win --publish never",
+    "build:release": "dotenv -- cross-env ELECTRON_BUILDER_ALLOW_EMPTY_TAG=true electron-builder --win --publish always"
+  },
+  "keywords": ["electron", "music", "visual-schedule", "classroom", "autism", "education"],
+  "author": {
+    "name": "pconniff1-tech",
+    "url": "https://github.com/pconniff1-tech"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "homepage": "https://github.com/pconniff1-tech/Elementary-Music-Visual-Schedule-App#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pconniff1-tech/Elementary-Music-Visual-Schedule-App.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pconniff1-tech/Elementary-Music-Visual-Schedule-App/issues"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "dotenv-cli": "^7.4.2",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "build": {
+    "appId": "com.music.visualschedule",
+    "productName": "MusicVisualSchedule",
+    "files": [
+      "src/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "pconniff1-tech",
+        "repo": "Elementary-Music-Visual-Schedule-App",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
