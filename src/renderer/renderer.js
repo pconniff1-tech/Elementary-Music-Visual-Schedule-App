@@ -290,6 +290,89 @@ function showStage() {
     state.schedules = await api.listSchedules();
   }
 
+  /* ---------- Drag-to-reorder steps ---------- */
+
+  const SCROLL_ZONE = 90;
+  const SCROLL_MAX_SPEED = 28;
+  const drag = { from: -1, to: -1, pointerY: 0, frame: 0 };
+
+  const clearDropMarkers = () => {
+    els.stepList.querySelectorAll('.drop-before, .drop-after').forEach((r) => r.classList.remove('drop-before', 'drop-after'));
+  };
+
+  const endDrag = () => {
+    cancelAnimationFrame(drag.frame);
+    drag.frame = 0;
+    drag.from = -1;
+    drag.to = -1;
+    clearDropMarkers();
+    els.stepList.querySelectorAll('.dragging').forEach((r) => r.classList.remove('dragging'));
+  };
+
+  // Speed grows quadratically as the pointer nears (or passes) the list edge.
+  const autoScrollSpeed = () => {
+    const rect = els.stepList.getBoundingClientRect();
+    const fromTop = drag.pointerY - rect.top;
+    const fromBottom = rect.bottom - drag.pointerY;
+    const zone = Math.min(SCROLL_ZONE, rect.height / 2);
+    if (fromTop < zone) return -SCROLL_MAX_SPEED * Math.pow(Math.min(1, (zone - fromTop) / zone), 2);
+    if (fromBottom < zone) return SCROLL_MAX_SPEED * Math.pow(Math.min(1, (zone - fromBottom) / zone), 2);
+    return 0;
+  };
+
+  const startAutoScroll = () => {
+    const tick = () => {
+      if (drag.from < 0) return;
+      const speed = autoScrollSpeed();
+      if (speed) {
+        els.stepList.scrollTop += speed;
+        updateDropTarget();
+      }
+      drag.frame = requestAnimationFrame(tick);
+    };
+    drag.frame = requestAnimationFrame(tick);
+  };
+
+  const updateDropTarget = () => {
+    const rows = [...els.stepList.querySelectorAll('.step-row')];
+    let to = rows.length;
+    for (let i = 0; i < rows.length; i += 1) {
+      const rect = rows[i].getBoundingClientRect();
+      if (drag.pointerY < rect.top + rect.height / 2) { to = i; break; }
+    }
+    drag.to = to;
+    clearDropMarkers();
+    if (to < rows.length) rows[to].classList.add('drop-before');
+    else if (rows.length) rows[rows.length - 1].classList.add('drop-after');
+  };
+
+  els.stepList.addEventListener('dragover', (e) => {
+    if (drag.from < 0) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    drag.pointerY = e.clientY;
+    updateDropTarget();
+  });
+
+  els.stepList.addEventListener('drop', (e) => {
+    if (drag.from < 0) return;
+    e.preventDefault();
+    const from = drag.from;
+    let to = drag.to;
+    endDrag();
+    if (to < 0 || to === from || to === from + 1) return;
+    const [moved] = state.draft.splice(from, 1);
+    if (to > from) to -= 1;
+    state.draft.splice(to, 0, moved);
+    renderDraft();
+  });
+
+  // Keep scrolling and tracking even when the cursor leaves the list while dragging.
+  document.addEventListener('dragover', (e) => {
+    if (drag.from < 0) return;
+    drag.pointerY = e.clientY;
+  });
+
   function renderDraft() {
     els.stepList.replaceChildren();
     state.draft.forEach((step, index) => els.stepList.appendChild(createStepRow(step, index)));
@@ -298,6 +381,28 @@ function showStage() {
   function createStepRow(step, index) {
     const row = document.createElement('div');
     row.className = 'step-row';
+    row.dataset.index = String(index);
+
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.addEventListener('mousedown', () => { row.draggable = true; });
+    handle.addEventListener('mouseup', () => { row.draggable = false; });
+    row.addEventListener('dragstart', (e) => {
+      if (!row.draggable) return;
+      drag.from = index;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+      requestAnimationFrame(() => row.classList.add('dragging'));
+      startAutoScroll();
+    });
+    row.addEventListener('dragend', () => {
+      row.draggable = false;
+      endDrag();
+    });
+    row.appendChild(handle);
 
     const image = state.images.find((i) => i.id === step.image_id);
     if (image) {
@@ -360,26 +465,13 @@ function showStage() {
 
     const actions = document.createElement('div');
     actions.className = 'step-actions';
-    const mk = (label, aria, handler, disabled, cls) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = label;
-      b.setAttribute('aria-label', `${aria} step ${index + 1}`);
-      if (cls) b.className = cls;
-      b.disabled = disabled;
-      b.addEventListener('click', handler);
-      return b;
-    };
-    const move = (delta) => () => {
-      const target = index + delta;
-      [state.draft[index], state.draft[target]] = [state.draft[target], state.draft[index]];
-      renderDraft();
-    };
-    actions.append(
-      mk('↑', 'Move up', move(-1), index === 0, 'subtle'),
-      mk('↓', 'Move down', move(1), index === state.draft.length - 1, 'subtle'),
-      mk('✕', 'Remove', () => { state.draft.splice(index, 1); renderDraft(); }, false, 'danger')
-    );
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'danger';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `Remove step ${index + 1}`);
+    remove.addEventListener('click', () => { state.draft.splice(index, 1); renderDraft(); });
+    actions.appendChild(remove);
     row.appendChild(actions);
 
     const url = document.createElement('input');
