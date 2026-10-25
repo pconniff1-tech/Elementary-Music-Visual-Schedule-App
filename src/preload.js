@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('scheduleApi', {
   getAppVersion: () => ipcRenderer.invoke('update:get-version'),
   getUpdateStatus: () => ipcRenderer.invoke('update:get-status'),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  deferUpdate: () => ipcRenderer.invoke('update:later'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   onUpdateStatus: (callback) => ipcRenderer.on('update:status', (_e, status) => callback(status)),
   setNavEnabled: (enabled) => ipcRenderer.send('nav:set-enabled', Boolean(enabled))

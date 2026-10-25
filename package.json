@@ -1,6 +1,6 @@
 {
   "name": "music-visual-schedule",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Customizable visual schedule for ASD and General Music Classrooms",
   "main": "src/main.js",
   "scripts": {
@@ -13,7 +13,14 @@
     "build:local": "electron-builder --win --publish never",
     "build:release": "dotenv -- cross-env ELECTRON_BUILDER_ALLOW_EMPTY_TAG=true electron-builder --win --publish always"
   },
-  "keywords": ["electron", "music", "visual-schedule", "classroom", "autism", "education"],
+  "keywords": [
+    "electron",
+    "music",
+    "visual-schedule",
+    "classroom",
+    "autism",
+    "education"
+  ],
   "author": {
     "name": "pconniff1-tech",
     "url": "https://github.com/pconniff1-tech"

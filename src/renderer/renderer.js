@@ -30,6 +30,8 @@
     appVersion: $('app-version'),
     updateStatus: $('update-status'),
     checkUpdate: $('check-update-btn'),
+    downloadUpdate: $('download-update-btn'),
+    laterUpdate: $('later-update-btn'),
     installUpdate: $('install-update-btn')
   };
 
@@ -466,13 +468,17 @@ function showStage() {
 
   const renderUpdateStatus = (status) => {
     els.updateStatus.textContent = status.message || '';
-    const busy = status.state === 'checking' || status.state === 'downloading';
-    els.checkUpdate.disabled = busy || status.state === 'ready';
+    const busy = ['checking', 'available', 'downloading', 'ready'].includes(status.state);
+    els.checkUpdate.disabled = busy;
+    els.downloadUpdate.hidden = status.state !== 'available';
+    els.laterUpdate.hidden = status.state !== 'available';
     els.installUpdate.hidden = status.state !== 'ready';
   };
 
   api.onUpdateStatus(renderUpdateStatus);
   els.checkUpdate.addEventListener('click', async () => renderUpdateStatus(await api.checkForUpdates()));
+  els.downloadUpdate.addEventListener('click', async () => renderUpdateStatus(await api.downloadUpdate()));
+  els.laterUpdate.addEventListener('click', async () => renderUpdateStatus(await api.deferUpdate()));
   els.installUpdate.addEventListener('click', () => api.installUpdate());
 
   document.addEventListener('keydown', (e) => {

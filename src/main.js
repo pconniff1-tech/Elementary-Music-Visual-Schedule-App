@@ -268,7 +268,6 @@ app.whenReady().then(async () => {
   registerAssetProtocol();
   await startAudioProxy();
   createWindow();
-  mainWindow.webContents.once('did-finish-load', () => { if (app.isPackaged) updater.check(); });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

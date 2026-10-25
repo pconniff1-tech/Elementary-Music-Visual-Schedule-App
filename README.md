@@ -13,7 +13,7 @@ Download the latest **MusicVisualSchedule-Setup** installer from the [GitHub Rel
 - Display Google Slides, Canva, and supported audio links.
 - Advance or reverse the schedule using the keyboard or a presentation clicker.
 - Store schedules and image files locally on the computer.
-- Check for, download, and install updates from the app's setup panel.
+- Check for updates from the app's setup panel, then choose to download now or later and install when ready. Nothing is checked or downloaded automatically.
 
 Schedule data and imported images are stored in the current user's Electron application-data folder and are not uploaded by the app.
 
