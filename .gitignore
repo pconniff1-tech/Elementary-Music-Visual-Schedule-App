@@ -1,6 +1,12 @@
 # Local Environment Secrets
 .env*
 
+# Local planning and agent handover notes
+/agents.md
+/app-blueprints.md
+/Blueprint Patch.md
+/context_ledger.md
+
 # Dependency Directory
 # (Never commit this; npm install rebuilds it from package.json)
 node_modules/
