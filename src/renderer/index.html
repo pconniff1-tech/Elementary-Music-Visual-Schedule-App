@@ -19,6 +19,7 @@
         </div>
         <iframe id="presentation-frame" title="Presentation" referrerpolicy="no-referrer" hidden
                 allow="fullscreen; encrypted-media; picture-in-picture"></iframe>
+        <button id="youtube-fallback-btn" class="youtube-fallback" hidden></button>
         <div id="audio-resource-player" class="audio-resource-player" hidden>
           <img id="audio-stage-graphic" class="audio-stage-graphic" alt="">
           <audio id="native-audio-element" aria-label="Activity audio player" controls
@@ -51,6 +52,10 @@
           <button id="new-class-btn">+ Create New Class Profile</button>
           <button id="delete-class-btn" class="danger">Delete This Class</button>
           <button id="reset-progress-btn">Reset Checkmarks</button>
+
+          <h3>YouTube</h3>
+          <p class="update-text">Sign in once if YouTube asks you to confirm you're not a bot.</p>
+          <button id="youtube-sign-in-btn">Sign in to YouTube</button>
 
           <h3>App Updates</h3>
           <p id="app-version" class="update-text"></p>

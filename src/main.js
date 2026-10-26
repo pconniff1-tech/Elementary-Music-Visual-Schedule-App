@@ -35,7 +35,9 @@ function uniqueFilename(dir, filename) {
   return candidate;
 }
 
-const POPUP_HOSTS = ['google.com', 'canva.com', 'canva.link', 'gstatic.com'];
+const POPUP_HOSTS = ['google.com', 'youtube.com', 'canva.com', 'canva.link', 'gstatic.com'];
+const YOUTUBE_SIGN_IN_URL = 'https://accounts.google.com/ServiceLogin?service=youtube&continue=' +
+  encodeURIComponent('https://www.youtube.com/');
 
 function isTrustedPopup(url) {
   try {
@@ -53,6 +55,22 @@ function isId(value) {
 
 function registerIpc() {
   ipcMain.on('nav:set-enabled', (_e, enabled) => { navEnabled = enabled === true; });
+  ipcMain.handle('youtube:sign-in', () => {
+    // Sign-in runs in its own window that shares this session; closing it reloads the frame.
+    const signIn = new BrowserWindow({
+      parent: mainWindow,
+      width: 520,
+      height: 760,
+      autoHideMenuBar: true,
+      webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
+    });
+    signIn.webContents.setWindowOpenHandler(({ url }) =>
+      (isTrustedPopup(url) ? { action: 'allow' } : { action: 'deny' }));
+    signIn.on('closed', () => {
+      if (!mainWindow.isDestroyed()) mainWindow.webContents.send('auth-popup-closed');
+    });
+    signIn.loadURL(YOUTUBE_SIGN_IN_URL);
+  });
   ipcMain.handle('audio:get-proxy-base', () => audioProxyBase);
   ipcMain.handle('schedules:list', () => db.listSchedules());
   ipcMain.handle('schedules:create', (_e, name, grade) => db.createSchedule(name, grade));

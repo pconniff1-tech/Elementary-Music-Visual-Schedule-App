@@ -1,5 +1,5 @@
 (function () {
-  const { formatPresentationUrl, getAudioStreamUrl } = window.ScheduleUtils;
+  const { formatPresentationUrl, getAudioStreamUrl, getYouTubeWatchUrl } = window.ScheduleUtils;
   const api = window.scheduleApi;
   const LAST_SCHEDULE_KEY = 'lastScheduleId';
   let audioProxyBase = '';
@@ -8,6 +8,8 @@
   const els = {
     gear: $('gear-btn'),
     frame: $('presentation-frame'),
+    youtubeFallback: $('youtube-fallback-btn'),
+    youtubeSignIn: $('youtube-sign-in-btn'),
     placeholder: $('stage-placeholder'),
     stageTitle: $('stage-title'),
     stageImage: $('stage-image'),
@@ -42,6 +44,7 @@
     items: [],
     completed: new Set(),
     audioFailed: new Set(),
+    youtubeWatch: new Set(),
     activeIndex: -1,
     draft: [],
     draftScheduleId: null
@@ -89,7 +92,11 @@
 function showStage() {
     const item = state.items[state.activeIndex];
     const audioUrl = item ? getAudioStreamUrl(item.external_url, audioProxyBase) : '';
-    const url = item ? formatPresentationUrl(item.external_url) : '';
+    const youtubeWatchUrl = item ? getYouTubeWatchUrl(item.external_url) : '';
+    const useWatchPage = Boolean(youtubeWatchUrl) && state.youtubeWatch.has(item.external_url);
+    const url = item ? formatPresentationUrl(item.external_url, { youtubeWatchPage: useWatchPage }) : '';
+    els.youtubeFallback.hidden = !youtubeWatchUrl || Boolean(audioUrl);
+    els.youtubeFallback.textContent = useWatchPage ? 'Use simple player' : 'Video not loading? Use full YouTube page';
 
     // Title lives in a bar below the stage content, so it shows for every content type
     els.stageTitle.textContent = item
@@ -554,6 +561,15 @@ function showStage() {
 
   api.onAuthPopupClosed(() => {
     if (els.frame.dataset.src) els.frame.src = els.frame.dataset.src;
+  });
+
+  els.youtubeSignIn.addEventListener('click', () => api.signInToYouTube());
+
+  els.youtubeFallback.addEventListener('click', () => {
+    const item = state.items[state.activeIndex];
+    if (!item) return;
+    if (!state.youtubeWatch.delete(item.external_url)) state.youtubeWatch.add(item.external_url);
+    showStage();
   });
 
   /* ---------- App updates ---------- */

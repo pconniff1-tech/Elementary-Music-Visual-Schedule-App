@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('scheduleApi', {
   listImages: () => ipcRenderer.invoke('images:list'),
   uploadImage: () => ipcRenderer.invoke('images:upload'),
   onAuthPopupClosed: (callback) => ipcRenderer.on('auth-popup-closed', () => callback()),
+  signInToYouTube: () => ipcRenderer.invoke('youtube:sign-in'),
   onNavigate: (callback) => ipcRenderer.on('navigate-step', (_e, direction) => callback(direction)),
   getAppVersion: () => ipcRenderer.invoke('update:get-version'),
   getUpdateStatus: () => ipcRenderer.invoke('update:get-status'),

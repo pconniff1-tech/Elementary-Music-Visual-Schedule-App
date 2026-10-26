@@ -254,6 +254,22 @@ html, body { margin: 0; padding: 0; }
 }
 .schedule-selector-panel { display: flex; flex-direction: column; gap: 10px; }
 .update-text { margin: 0; font-size: 0.9rem; opacity: 0.85; }
+.youtube-fallback {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 5;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  opacity: 0.6;
+  cursor: pointer;
+}
+.youtube-fallback:hover { opacity: 1; }
+.youtube-fallback[hidden] { display: none; }
 .sequence-builder-panel { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .modal-body h3 { margin: 0; }
 #item-sequence-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }

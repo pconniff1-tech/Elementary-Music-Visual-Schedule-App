@@ -32,9 +32,25 @@
   };
 
   // Returns an embeddable http(s) URL, or '' if the input is not a web URL.
-  function formatPresentationUrl(rawUrl) {
+  // Full youtube.com watch page for a YouTube link, or '' for anything else.
+  function getYouTubeWatchUrl(rawUrl) {
+    const parsed = parseHttpUrl(rawUrl);
+    const videoId = parsed ? getYouTubeVideoId(parsed) : '';
+    if (!videoId) return '';
+    const watch = new URL('https://www.youtube.com/watch');
+    watch.searchParams.set('v', videoId);
+    const start = parseInt(parsed.searchParams.get('t') || parsed.searchParams.get('start'), 10);
+    if (start > 0) watch.searchParams.set('t', String(start));
+    return watch.href;
+  }
+
+  function formatPresentationUrl(rawUrl, options = {}) {
     const parsed = parseHttpUrl(rawUrl);
     if (!parsed) return '';
+    if (options.youtubeWatchPage) {
+      const watchUrl = getYouTubeWatchUrl(rawUrl);
+      if (watchUrl) return watchUrl;
+    }
 
     const host = parsed.hostname.toLowerCase();
 
@@ -45,7 +61,7 @@
 
     const videoId = getYouTubeVideoId(parsed);
     if (videoId) {
-      const embed = new URL('https://www.youtube-nocookie.com/embed/' + videoId);
+      const embed = new URL('https://www.youtube.com/embed/' + videoId);
       embed.searchParams.set('rel', '0');
       embed.searchParams.set('controls', '1');
       embed.searchParams.set('fs', '1');
@@ -86,7 +102,7 @@
     return streamUrl.href;
   }
 
-  const api = { formatPresentationUrl, getAudioStreamUrl };
+  const api = { formatPresentationUrl, getAudioStreamUrl, getYouTubeWatchUrl };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ScheduleUtils = api;
 })(typeof window !== 'undefined' ? window : globalThis);

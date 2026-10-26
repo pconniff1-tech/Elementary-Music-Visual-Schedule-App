@@ -1,7 +1,19 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { formatPresentationUrl, getAudioStreamUrl } = require('../src/renderer/schedule-utils');
+const { formatPresentationUrl, getAudioStreamUrl, getYouTubeWatchUrl } = require('../src/renderer/schedule-utils');
 const audioProxy = 'http://127.0.0.1:45678/audio/test-token';
+
+test('formats YouTube links as youtube.com embeds and optional watch pages', () => {
+  assert.strictEqual(
+    formatPresentationUrl('https://youtu.be/dQw4w9WgXcQ'),
+    'https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&controls=1&fs=1'
+  );
+  assert.strictEqual(
+    formatPresentationUrl('https://youtu.be/dQw4w9WgXcQ?t=30', { youtubeWatchPage: true }),
+    'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30'
+  );
+  assert.strictEqual(getYouTubeWatchUrl('https://example.com/a'), '');
+});
 
 test('Google Slides edit links become embed links', () => {
   assert.strictEqual(
