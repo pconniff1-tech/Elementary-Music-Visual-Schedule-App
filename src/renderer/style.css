@@ -227,7 +227,8 @@ html, body { margin: 0; padding: 0; }
 }
 .modal-content {
   width: min(1000px, 94vw);
-  max-height: 90vh;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   background: var(--thumbnail-bg);
@@ -246,13 +247,14 @@ html, body { margin: 0; padding: 0; }
 .modal-error { background: #b91c1c; padding: 8px 20px; }
 .modal-body {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   gap: 20px;
   padding: 20px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   min-height: 0;
 }
-.schedule-selector-panel { display: flex; flex-direction: column; gap: 10px; }
+.schedule-selector-panel { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .update-text { margin: 0; font-size: 0.9rem; opacity: 0.85; }
 .youtube-fallback {
   position: absolute;
@@ -270,12 +272,20 @@ html, body { margin: 0; padding: 0; }
 }
 .youtube-fallback:hover { opacity: 1; }
 .youtube-fallback[hidden] { display: none; }
-.sequence-builder-panel { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.sequence-builder-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
 .modal-body h3 { margin: 0; }
 #item-sequence-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 120px; }
 
 .modal-content label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .modal-content input, .modal-content select {
+  width: 100%;
+  box-sizing: border-box;
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid var(--input-border);
@@ -298,7 +308,7 @@ html, body { margin: 0; padding: 0; }
 
 .step-row {
   display: grid;
-  grid-template-columns: 24px 70px 1fr auto;
+  grid-template-columns: 24px 70px minmax(0, 1fr) auto;
   gap: 10px;
   padding: 10px;
   background: var(--input-bg);
@@ -321,6 +331,6 @@ html, body { margin: 0; padding: 0; }
 .step-row.drop-after { box-shadow: 0 4px 0 0 var(--accent-color); }
 .step-row .thumb { width: 70px; height: 70px; object-fit: contain; background: var(--stage-bg); border-radius: 6px; }
 .step-row .thumb-empty { width: 70px; height: 70px; background: var(--border-color); border-radius: 6px; }
-.step-fields { display: flex; flex-direction: column; gap: 6px; }
+.step-fields { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .step-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.step-url { grid-column: 3 / 5; }
+.step-url { grid-column: 3 / 5; min-width: 0; }

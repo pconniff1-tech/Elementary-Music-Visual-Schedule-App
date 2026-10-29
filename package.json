@@ -1,6 +1,6 @@
 {
   "name": "music-visual-schedule",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Customizable visual schedule for ASD and General Music Classrooms",
   "main": "src/main.js",
   "scripts": {
