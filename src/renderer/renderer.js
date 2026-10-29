@@ -273,6 +273,7 @@ function showStage() {
     els.className.value = current ? current.name : '';
     els.classGrade.value = current && current.grade_level ? current.grade_level : '';
     const has = Boolean(current);
+    els.newClass.disabled = false;
     [els.className, els.classGrade, els.deleteClass, els.addStep, els.resetProgress].forEach((el) => { el.disabled = !has; });
   }
 

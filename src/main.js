@@ -56,11 +56,11 @@ function isId(value) {
 function registerIpc() {
   ipcMain.on('nav:set-enabled', (_e, enabled) => { navEnabled = enabled === true; });
   ipcMain.handle('youtube:sign-in', () => {
-    // Sign-in runs in its own window that shares this session; closing it reloads the frame.
+    // Keep sign-in independent so setup editing remains usable while authentication is open.
     const signIn = new BrowserWindow({
-      parent: mainWindow,
       width: 520,
       height: 760,
+      modal: false,
       autoHideMenuBar: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true }
     });
