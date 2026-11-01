@@ -1,3 +1,4 @@
+const fs = require('fs');
 const Database = require('better-sqlite3');
 
 const SCHEMA = `
@@ -28,11 +29,45 @@ CREATE INDEX IF NOT EXISTS idx_schedule_items_schedule
     ON schedule_items(schedule_id, position);
 `;
 
+// Ordered, append-only. Each migration runs once in a transaction and bumps PRAGMA user_version.
+// Version 1 is the 1.0.6 baseline; it is idempotent, so databases created before versioning
+// (user_version 0, tables already present) adopt it without any data change.
+// To change the schema: append { version: N, up: (db) => { ... } } and never edit earlier entries.
+const MIGRATIONS = [
+  { version: 1, up: (db) => db.exec(SCHEMA) }
+];
+
+const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+function migrate(db, dbPath, migrations = MIGRATIONS) {
+  const latest = migrations[migrations.length - 1].version;
+  const current = db.pragma('user_version', { simple: true });
+  if (current > latest) {
+    throw new Error(`This data was created by a newer version of the app (schema ${current}). Please update the app.`);
+  }
+  const pending = migrations.filter((m) => m.version > current);
+  if (!pending.length) return;
+
+  const hadData = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schedules'").get();
+  if (hadData && pending.some((m) => m.version > 1) && dbPath !== ':memory:') {
+    // Safety copy of the pre-migration database so a bad upgrade never costs a teacher their schedules.
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    fs.copyFileSync(dbPath, `${dbPath}.pre-v${pending[pending.length - 1].version}.bak`);
+  }
+
+  pending.forEach((m) => {
+    db.transaction(() => {
+      m.up(db);
+      db.pragma(`user_version = ${m.version}`);
+    })();
+  });
+}
+
 function createDb(dbPath) {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  db.exec(SCHEMA);
+  migrate(db, dbPath);
 
   const statements = {
     listSchedules: db.prepare('SELECT id, name, grade_level FROM schedules ORDER BY name COLLATE NOCASE'),
@@ -53,7 +88,16 @@ function createDb(dbPath) {
       VALUES (?, ?, ?, ?, ?)`),
     listImages: db.prepare('SELECT id, title, image_filename FROM image_library ORDER BY title COLLATE NOCASE'),
     getImage: db.prepare('SELECT id FROM image_library WHERE id = ?'),
-    insertImage: db.prepare('INSERT INTO image_library (title, image_filename) VALUES (?, ?)')
+    insertImage: db.prepare('INSERT INTO image_library (title, image_filename) VALUES (?, ?)'),
+    getImageRow: db.prepare('SELECT id, title, image_filename FROM image_library WHERE id = ?'),
+    renameImage: db.prepare('UPDATE image_library SET title = ? WHERE id = ?'),
+    deleteImage: db.prepare('DELETE FROM image_library WHERE id = ?'),
+    imageUsage: db.prepare(`
+      SELECT DISTINCT s.id, s.name
+      FROM schedule_items si
+      JOIN schedules s ON s.id = si.schedule_id
+      WHERE si.image_id = ?
+      ORDER BY s.name COLLATE NOCASE`)
   };
 
   function cleanText(value, max) {
@@ -106,8 +150,30 @@ function createDb(dbPath) {
       const cleanTitle = cleanText(title, 100) || filename;
       const info = statements.insertImage.run(cleanTitle, filename);
       return { id: Number(info.lastInsertRowid), title: cleanTitle, image_filename: filename };
+    },
+
+    getImageUsage: (id) => statements.imageUsage.all(id),
+
+    renameImage(id, title) {
+      const cleanTitle = cleanText(title, 100);
+      if (!cleanTitle) throw new Error('An icon title is required.');
+      if (!statements.getImageRow.get(id)) throw new Error('Icon not found.');
+      statements.renameImage.run(cleanTitle, id);
+      return statements.getImageRow.get(id);
+    },
+
+    // Refuses to delete an icon still used by a schedule step; returns the removed row otherwise.
+    deleteImage(id) {
+      const row = statements.getImageRow.get(id);
+      if (!row) throw new Error('Icon not found.');
+      const usage = statements.imageUsage.all(id);
+      if (usage.length) {
+        throw new Error(`This icon is used by: ${usage.map((s) => s.name).join(', ')}. Remove it from those schedules first.`);
+      }
+      statements.deleteImage.run(id);
+      return row;
     }
   };
 }
 
-module.exports = { createDb };
+module.exports = { createDb, migrate, MIGRATIONS, LATEST_VERSION };

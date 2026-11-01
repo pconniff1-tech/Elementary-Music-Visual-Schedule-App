@@ -93,6 +93,26 @@ function registerIpc() {
   });
 
   ipcMain.handle('images:list', () => db.listImages());
+  ipcMain.handle('images:usage', (_e, id) => {
+    if (!isId(id)) throw new Error('Invalid icon.');
+    return db.getImageUsage(id);
+  });
+  ipcMain.handle('images:rename', (_e, id, title) => {
+    if (!isId(id)) throw new Error('Invalid icon.');
+    return db.renameImage(id, title);
+  });
+  ipcMain.handle('images:delete', (_e, id) => {
+    if (!isId(id)) throw new Error('Invalid icon.');
+    const row = db.deleteImage(id);
+    const filename = path.basename(row.image_filename);
+    const filePath = path.join(libraryDir, filename);
+    // Only remove the file once no other row still references it.
+    const stillShared = db.listImages().some((i) => i.image_filename === row.image_filename);
+    if (!stillShared && IMAGE_EXTENSIONS.includes(path.extname(filename).slice(1).toLowerCase())) {
+      try { fs.unlinkSync(filePath); } catch (_err) { /* file already missing */ }
+    }
+    return true;
+  });
   ipcMain.handle('images:upload', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],

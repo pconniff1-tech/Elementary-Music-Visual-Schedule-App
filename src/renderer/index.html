@@ -8,8 +8,43 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <section id="view-landing" class="view-panel">
+    <div class="top-bar">
+      <button id="btn-global-settings" class="icon-btn" aria-label="Open settings">⚙</button>
+    </div>
+
+    <div class="hero-brand">
+      <h1>Music Visual Schedule</h1>
+      <span id="app-version-label" class="version-text"></span>
+    </div>
+
+    <div class="schedule-selector-card">
+      <div id="landing-error" class="modal-error" role="alert" hidden></div>
+      <label for="select-schedule">Pick a Visual Schedule</label>
+      <select id="select-schedule">
+        <option value="" disabled selected>Select a schedule...</option>
+      </select>
+
+      <div id="schedule-actions-row" class="actions-row" hidden>
+        <button id="btn-action-present" class="btn-primary">Present</button>
+        <button id="btn-action-edit" class="btn-secondary">Edit</button>
+        <button id="delete-class-btn" class="btn-danger">Delete</button>
+      </div>
+      <button id="new-class-btn" class="btn-secondary">+ New Schedule</button>
+    </div>
+
+    <div class="footer-bar">
+      <button id="btn-open-icons" class="btn-link">📂 Open Icon Library</button>
+    </div>
+  </section>
+
+  <section id="view-presentation" class="view-panel" hidden>
   <div class="app-container">
-    <button id="gear-btn" class="gear-menu-trigger" aria-label="Open setup">⚙</button>
+    <div class="floating-classroom-controls">
+      <button id="btn-present-home" class="btn-translucent">🏠 Home</button>
+      <button id="btn-present-quick-edit" class="btn-translucent">✏️ Edit</button>
+      <button id="reset-progress-btn" class="btn-translucent" aria-label="Reset checkmarks">↺ Reset</button>
+    </div>
 
     <div class="stage">
       <div class="stage-content">
@@ -33,47 +68,77 @@
 
     <div id="bottom-row-container" class="bottom-row"></div>
   </div>
+  </section>
 
-  <div id="setup-modal" class="modal-overlay" hidden>
+  <dialog id="modal-settings" class="app-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>App Configuration &amp; Visual Schedule Builder</h2>
-        <button id="close-modal-btn">✕ Save &amp; Close</button>
+        <h2>Settings</h2>
       </div>
-
-      <div id="modal-error" class="modal-error" role="alert" hidden></div>
-
-      <div class="modal-body">
+      <div class="modal-body modal-body-single">
         <div class="schedule-selector-panel">
-          <h3>1. Select Classroom Routine</h3>
-          <select id="class-select-dropdown" aria-label="Classroom routine"></select>
-          <label>Class name <input id="class-name-input" type="text" maxlength="100"></label>
-          <label>Grade / group <input id="class-grade-input" type="text" maxlength="50"></label>
-          <button id="new-class-btn">+ Create New Class Profile</button>
-          <button id="delete-class-btn" class="danger">Delete This Class</button>
-          <button id="reset-progress-btn">Reset Checkmarks</button>
-
           <h3>YouTube</h3>
           <p class="update-text">Sign in once if YouTube asks you to confirm you're not a bot.</p>
           <button id="youtube-sign-in-btn">Sign in to YouTube</button>
 
           <h3>App Updates</h3>
-          <p id="app-version" class="update-text"></p>
           <p id="update-status" class="update-text" role="status" aria-live="polite"></p>
           <button id="check-update-btn">Check for Updates</button>
           <button id="download-update-btn" hidden>Download Now</button>
           <button id="later-update-btn" hidden>Download Later</button>
           <button id="install-update-btn" hidden>Restart &amp; Install Update</button>
         </div>
-
-        <div class="sequence-builder-panel">
-          <h3>2. Edit Schedule Steps</h3>
-          <div id="item-sequence-list"></div>
-          <button id="add-step-btn">+ Add Sequence Step Slot</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-settings-close" class="subtle">Close</button>
       </div>
     </div>
-  </div>
+  </dialog>
+
+  <dialog id="modal-builder" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Schedule</h2>
+      </div>
+
+      <div id="modal-error" class="modal-error" role="alert" hidden></div>
+
+      <div class="modal-body">
+        <div class="schedule-selector-panel">
+          <label>Schedule name <input id="class-name-input" type="text" maxlength="100"></label>
+          <label>Grade / group <input id="class-grade-input" type="text" maxlength="50"></label>
+        </div>
+
+        <div class="sequence-builder-panel">
+          <h3>Schedule Steps</h3>
+          <div id="item-sequence-list"></div>
+          <button id="add-step-btn">+ Add Step</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-builder-save">Save</button>
+        <button id="btn-builder-save-present" class="btn-save-present">Save &amp; Present</button>
+        <button id="btn-builder-close" class="subtle">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="modal-icons" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="icons-title">Icon Library</h2>
+        <button id="btn-add-system-icon">+ Add Icon</button>
+      </div>
+      <div id="icons-error" class="modal-error" role="alert" hidden></div>
+      <div class="modal-body modal-body-single">
+        <div id="icon-library-grid" class="thumbnail-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-icons-close" class="subtle">Close Library</button>
+      </div>
+      <div id="icon-tooltip" class="icon-tooltip" role="tooltip" hidden></div>
+    </div>
+  </dialog>
 
   <script src="schedule-utils.js"></script>
   <script src="renderer.js"></script>

@@ -6,7 +6,30 @@
 
   const $ = (id) => document.getElementById(id);
   const els = {
-    gear: $('gear-btn'),
+    landing: $('view-landing'),
+    presentation: $('view-presentation'),
+    landingError: $('landing-error'),
+    settingsBtn: $('btn-global-settings'),
+    appVersion: $('app-version-label'),
+    scheduleSelect: $('select-schedule'),
+    actionsRow: $('schedule-actions-row'),
+    present: $('btn-action-present'),
+    editFromLanding: $('btn-action-edit'),
+    openIcons: $('btn-open-icons'),
+    home: $('btn-present-home'),
+    quickEdit: $('btn-present-quick-edit'),
+    settingsModal: $('modal-settings'),
+    settingsClose: $('btn-settings-close'),
+    builderModal: $('modal-builder'),
+    builderSave: $('btn-builder-save'),
+    builderSavePresent: $('btn-builder-save-present'),
+    builderCancel: $('btn-builder-close'),
+    iconsModal: $('modal-icons'),
+    iconsError: $('icons-error'),
+    iconsTitle: $('icons-title'),
+    iconsClose: $('btn-icons-close'),
+    iconGrid: $('icon-library-grid'),
+    addIcon: $('btn-add-system-icon'),
     frame: $('presentation-frame'),
     youtubeFallback: $('youtube-fallback-btn'),
     youtubeSignIn: $('youtube-sign-in-btn'),
@@ -18,10 +41,7 @@
     audioImage: $('audio-stage-graphic'),
     audio: $('native-audio-element'),
     bottom: $('bottom-row-container'),
-    modal: $('setup-modal'),
     modalError: $('modal-error'),
-    closeBtn: $('close-modal-btn'),
-    classSelect: $('class-select-dropdown'),
     className: $('class-name-input'),
     classGrade: $('class-grade-input'),
     newClass: $('new-class-btn'),
@@ -29,7 +49,6 @@
     resetProgress: $('reset-progress-btn'),
     stepList: $('item-sequence-list'),
     addStep: $('add-step-btn'),
-    appVersion: $('app-version'),
     updateStatus: $('update-status'),
     checkUpdate: $('check-update-btn'),
     downloadUpdate: $('download-update-btn'),
@@ -47,7 +66,10 @@
     youtubeWatch: new Set(),
     activeIndex: -1,
     draft: [],
-    draftScheduleId: null
+    draftScheduleId: null,
+    view: 'landing',
+    activeParentView: 'landing',
+    pickStep: null
   };
 
   function assetUrl(filename) {
@@ -214,14 +236,14 @@ function showStage() {
 
   // Next: check off the current step and advance. Previous: step back and uncheck it.
   function stepForward() {
-    if (state.activeIndex < 0 || !state.items.length) return;
+    if (state.view !== 'presentation' || state.activeIndex < 0 || !state.items.length) return;
     state.completed.add(state.activeIndex);
     state.activeIndex = state.activeIndex + 1 < state.items.length ? state.activeIndex + 1 : -1;
     renderSchedule();
   }
 
   function stepBack() {
-    if (!state.items.length) return;
+    if (state.view !== 'presentation' || !state.items.length) return;
     const target = state.activeIndex < 0 ? state.items.length - 1 : state.activeIndex - 1;
     if (target < 0) return;
     state.completed.delete(target);
@@ -243,38 +265,83 @@ function showStage() {
     renderSchedule();
   }
 
-  /* ---------- Setup modal ---------- */
+  /* ---------- Views, dialogs, and builder ---------- */
 
-  function showError(message) {
-    els.modalError.textContent = message || '';
-    els.modalError.hidden = !message;
+  function showError(message, target = els.modalError) {
+    target.textContent = message || '';
+    target.hidden = !message;
   }
 
-  async function guarded(fn) {
+  async function guarded(fn, errorEl = els.modalError) {
     try {
-      showError('');
+      showError('', errorEl);
       return await fn();
     } catch (e) {
-      showError((e && e.message ? e.message : String(e)).replace(/^Error invoking remote method '[^']*': (Error: )?/, ''));
+      showError((e && e.message ? e.message : String(e)).replace(/^Error invoking remote method '[^']*': (Error: )?/, ''), errorEl);
       return undefined;
     }
   }
 
-  function populateScheduleSelect() {
-    els.classSelect.replaceChildren();
+  // Clicker/keyboard capture in the main process is on only for the presentation with no dialog open.
+  const syncNav = () => {
+    api.setNavEnabled(state.view === 'presentation' && !document.querySelector('dialog[open]'));
+  };
+
+  const stopMedia = () => {
+    els.audio.pause();
+    delete els.audio.dataset.src;
+    els.audio.removeAttribute('src');
+    delete els.frame.dataset.src;
+    els.frame.removeAttribute('src');
+  };
+
+  const switchView = (target) => {
+    state.view = target;
+    els.landing.hidden = target !== 'landing';
+    els.presentation.hidden = target !== 'presentation';
+    if (target === 'landing') stopMedia();
+    syncNav();
+  };
+
+  const populateLandingSelect = () => {
+    els.scheduleSelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.disabled = true;
+    placeholder.textContent = 'Select a schedule...';
+    els.scheduleSelect.appendChild(placeholder);
     state.schedules.forEach((s) => {
       const opt = document.createElement('option');
       opt.value = String(s.id);
       opt.textContent = s.grade_level ? `${s.name} (${s.grade_level})` : s.name;
-      els.classSelect.appendChild(opt);
+      els.scheduleSelect.appendChild(opt);
     });
-    if (state.draftScheduleId) els.classSelect.value = String(state.draftScheduleId);
+    const exists = state.schedules.some((s) => s.id === state.scheduleId);
+    els.scheduleSelect.value = exists ? String(state.scheduleId) : '';
+    els.actionsRow.hidden = !exists;
+  };
+
+  const selectSchedule = (id) => {
+    state.scheduleId = id;
+    if (id) localStorage.setItem(LAST_SCHEDULE_KEY, String(id));
+    populateLandingSelect();
+  };
+
+  // Re-reads the active schedule after an edit while keeping the teacher's place.
+  async function reloadItemsKeepingPlace() {
+    const oldActive = state.activeIndex;
+    state.items = state.scheduleId ? await api.getItems(state.scheduleId) : [];
+    const last = state.items.length - 1;
+    state.completed = new Set([...state.completed].filter((i) => i <= last));
+    state.activeIndex = !state.items.length ? -1 : (oldActive < 0 ? -1 : Math.min(oldActive, last));
+    renderSchedule();
+  }
+
+  function populateBuilderFields() {
     const current = state.schedules.find((s) => s.id === state.draftScheduleId);
     els.className.value = current ? current.name : '';
     els.classGrade.value = current && current.grade_level ? current.grade_level : '';
-    const has = Boolean(current);
-    els.newClass.disabled = false;
-    [els.className, els.classGrade, els.deleteClass, els.addStep, els.resetProgress].forEach((el) => { el.disabled = !has; });
+    [els.className, els.classGrade, els.addStep].forEach((el) => { el.disabled = !current; });
   }
 
   async function loadDraft(scheduleId) {
@@ -286,7 +353,7 @@ function showStage() {
           external_url: i.external_url || ''
         }))
       : [];
-    populateScheduleSelect();
+    populateBuilderFields();
     renderDraft();
   }
 
@@ -439,35 +506,22 @@ function showStage() {
 
     const picker = document.createElement('div');
     picker.className = 'step-actions';
-    const select = document.createElement('select');
-    select.setAttribute('aria-label', `Step ${index + 1} image`);
-    const none = document.createElement('option');
-    none.value = '';
-    none.textContent = '— No image —';
-    select.appendChild(none);
-    state.images.forEach((img) => {
-      const opt = document.createElement('option');
-      opt.value = String(img.id);
-      opt.textContent = img.title;
-      select.appendChild(opt);
-    });
-    select.value = step.image_id ? String(step.image_id) : '';
-    select.addEventListener('change', () => {
-      step.image_id = select.value ? Number(select.value) : null;
-      renderDraft();
-    });
-    const upload = document.createElement('button');
-    upload.type = 'button';
-    upload.className = 'subtle';
-    upload.textContent = 'Upload image…';
-    upload.addEventListener('click', () => guarded(async () => {
-      const added = await api.uploadImage();
-      if (!added) return;
-      state.images = await api.listImages();
-      step.image_id = added.id;
-      renderDraft();
-    }));
-    picker.append(select, upload);
+    const pick = document.createElement('button');
+    pick.type = 'button';
+    pick.className = 'subtle';
+    pick.textContent = step.image_id ? 'Change image' : 'Pick image';
+    pick.setAttribute('aria-label', `Step ${index + 1} pick image`);
+    pick.addEventListener('click', () => openIconLibrary(step));
+    picker.appendChild(pick);
+    if (step.image_id) {
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'subtle';
+      clear.textContent = 'No image';
+      clear.setAttribute('aria-label', `Step ${index + 1} remove image`);
+      clear.addEventListener('click', () => { step.image_id = null; renderDraft(); });
+      picker.appendChild(clear);
+    }
     fields.appendChild(picker);
     row.appendChild(fields);
 
@@ -494,58 +548,225 @@ function showStage() {
     return row;
   }
 
-  async function openModal() {
-    els.modal.hidden = false;
-    api.setNavEnabled(false);
+  async function openBuilder(parentView) {
+    state.activeParentView = parentView;
+    state.draftScheduleId = null;
+    els.audio.pause();
+    els.builderModal.showModal();
+    syncNav();
     await guarded(async () => {
       [state.schedules, state.images] = await Promise.all([api.listSchedules(), api.listImages()]);
-      const id = state.schedules.some((s) => s.id === state.scheduleId) ? state.scheduleId : (state.schedules[0] && state.schedules[0].id) || null;
-      await loadDraft(id);
+      await loadDraft(state.schedules.some((s) => s.id === state.scheduleId) ? state.scheduleId : null);
     });
   }
 
-  async function closeModal() {
+  const closeBuilder = () => {
+    els.builderModal.close();
+    syncNav();
+  };
+
+  // Escape and Cancel discard unsaved edits; saving is always explicit.
+  const cancelBuilder = () => {
+    state.draft = [];
+    closeBuilder();
+    showError('');
+  };
+
+  async function saveBuilder(present) {
     const ok = await guarded(async () => {
       await persistDraft();
       return true;
     });
     if (!ok) return;
-    els.modal.hidden = true;
-    api.setNavEnabled(true);
-    await guarded(() => loadSchedule(state.draftScheduleId));
+    const fromPresentation = state.activeParentView === 'presentation';
+    closeBuilder();
+    populateLandingSelect();
+    await guarded(async () => {
+      if (fromPresentation) await reloadItemsKeepingPlace();
+      else if (present) await loadSchedule(state.scheduleId);
+    }, state.view === 'landing' ? els.landingError : els.modalError);
+    if (present) switchView('presentation');
   }
 
-  els.gear.addEventListener('click', openModal);
-  els.closeBtn.addEventListener('click', closeModal);
+  els.settingsBtn.addEventListener('click', () => { els.settingsModal.showModal(); syncNav(); });
+  els.settingsClose.addEventListener('click', () => els.settingsModal.close());
+  // Clicking the dimmed area outside the dropdown closes it.
+  els.settingsModal.addEventListener('click', (e) => { if (e.target === els.settingsModal) els.settingsModal.close(); });
+  // Opens the library; with a draft step it runs in pick mode (click an icon to assign it and close).
+  async function openIconLibrary(pickStep = null) {
+    state.pickStep = pickStep;
+    els.iconGrid.classList.toggle('pick-mode', Boolean(pickStep));
+    els.iconsTitle.textContent = pickStep ? 'Choose an Icon' : 'Icon Library';
+    els.iconsClose.textContent = pickStep ? 'Cancel' : 'Close Library';
+    els.iconsModal.showModal();
+    syncNav();
+    await guarded(async () => {
+      state.images = await api.listImages();
+      renderIconLibrary();
+    }, els.iconsError);
+  }
 
-  els.classSelect.addEventListener('change', () => guarded(async () => {
-    const next = Number(els.classSelect.value);
-    await persistDraft();
-    await loadDraft(next);
-  }));
+  els.openIcons.addEventListener('click', () => openIconLibrary());
+  els.iconsClose.addEventListener('click', () => els.iconsModal.close());
+  [els.settingsModal, els.iconsModal].forEach((d) => d.addEventListener('close', syncNav));
+  els.iconsModal.addEventListener('close', () => {
+    state.pickStep = null;
+    els.iconGrid.classList.remove('pick-mode');
+  });
+  els.builderModal.addEventListener('cancel', (e) => { e.preventDefault(); cancelBuilder(); });
+
+  els.builderSave.addEventListener('click', () => saveBuilder(false));
+  els.builderSavePresent.addEventListener('click', () => saveBuilder(true));
+  els.builderCancel.addEventListener('click', cancelBuilder);
+
+  els.scheduleSelect.addEventListener('change', () => {
+    const id = Number(els.scheduleSelect.value);
+    selectSchedule(id > 0 ? id : null);
+  });
+
+  els.present.addEventListener('click', () => guarded(async () => {
+    if (!state.scheduleId) return;
+    await loadSchedule(state.scheduleId);
+    switchView('presentation');
+  }, els.landingError));
+
+  els.editFromLanding.addEventListener('click', () => { if (state.scheduleId) openBuilder('landing'); });
+  els.quickEdit.addEventListener('click', () => { if (state.scheduleId) openBuilder('presentation'); });
+  els.home.addEventListener('click', () => switchView('landing'));
 
   els.newClass.addEventListener('click', () => guarded(async () => {
-    await persistDraft();
-    const created = await api.createSchedule('New Class', '');
+    const created = await api.createSchedule('New Schedule', '');
     state.schedules = await api.listSchedules();
-    await loadDraft(created.id);
+    selectSchedule(created.id);
+    await openBuilder('landing');
     els.className.focus();
     els.className.select();
-  }));
+  }, els.landingError));
 
   els.deleteClass.addEventListener('click', () => guarded(async () => {
-    const current = state.schedules.find((s) => s.id === state.draftScheduleId);
+    const current = state.schedules.find((s) => s.id === state.scheduleId);
     if (!current || !window.confirm(`Delete "${current.name}" and all of its steps?`)) return;
     await api.deleteSchedule(current.id);
     state.schedules = await api.listSchedules();
-    if (state.scheduleId === current.id) state.scheduleId = null;
-    await loadDraft(state.schedules[0] ? state.schedules[0].id : null);
-  }));
+    selectSchedule(null);
+  }, els.landingError));
 
   els.resetProgress.addEventListener('click', () => {
     state.completed = new Set();
     state.activeIndex = state.items.length ? 0 : -1;
     renderSchedule();
+  });
+
+  /* ---------- Icon library ---------- */
+
+  function renderIconLibrary() {
+    if (!state.images.length) {
+      const empty = document.createElement('p');
+      empty.className = 'icon-empty';
+      empty.textContent = 'No icons yet. Use "+ Add Icon" to import images.';
+      els.iconGrid.replaceChildren(empty);
+      return;
+    }
+    els.iconGrid.replaceChildren(...state.images.map((icon) => {
+      const card = document.createElement('div');
+      card.className = 'icon-thumb-card';
+      card.dataset.iconId = String(icon.id);
+
+      const img = document.createElement('img');
+      img.src = assetUrl(icon.image_filename);
+      img.alt = '';
+
+      const name = document.createElement('input');
+      name.type = 'text';
+      name.className = 'icon-rename-field';
+      name.maxLength = 100;
+      name.value = icon.title;
+      name.dataset.action = 'rename';
+      name.setAttribute('aria-label', `Title for ${icon.title}`);
+
+      const trash = document.createElement('button');
+      trash.type = 'button';
+      trash.className = 'danger btn-trash';
+      trash.dataset.action = 'delete';
+      trash.textContent = '🗑️';
+      trash.setAttribute('aria-label', `Delete ${icon.title}`);
+
+      card.append(img, name, trash);
+      return card;
+    }));
+  }
+
+  els.addIcon.addEventListener('click', () => guarded(async () => {
+    const added = await api.uploadImage();
+    if (!added) return;
+    state.images = await api.listImages();
+    renderIconLibrary();
+  }, els.iconsError));
+
+  els.iconGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('[data-icon-id]');
+    if (state.pickStep && card) {
+      state.pickStep.image_id = Number(card.dataset.iconId);
+      els.iconsModal.close();
+      renderDraft();
+      return;
+    }
+    const target = e.target.closest('[data-action="delete"]');
+    if (!target || !card) return;
+    const id = Number(card.dataset.iconId);
+    guarded(async () => {
+      const usage = await api.getImageUsage(id);
+      if (usage.length) {
+        throw new Error(`This icon is used by: ${usage.map((s) => s.name).join(', ')}. Remove it from those schedules first.`);
+      }
+      if (!window.confirm('Delete this icon from the library?')) return;
+      await api.deleteImage(id);
+      state.images = await api.listImages();
+      renderIconLibrary();
+    }, els.iconsError);
+  });
+
+  // Instant tooltip for truncated titles (native title tooltips have a fixed ~1s delay).
+  const iconTip = $('icon-tooltip');
+  const hideIconTip = () => { iconTip.hidden = true; };
+
+  els.iconGrid.addEventListener('mouseover', (e) => {
+    const field = e.target.closest('.icon-rename-field');
+    if (!field || field === document.activeElement || field.scrollWidth <= field.clientWidth) {
+      hideIconTip();
+      return;
+    }
+    iconTip.textContent = field.value;
+    iconTip.hidden = false;
+    const rect = field.getBoundingClientRect();
+    const tipRect = iconTip.getBoundingClientRect();
+    const left = Math.min(Math.max(8, rect.left + rect.width / 2 - tipRect.width / 2), window.innerWidth - tipRect.width - 8);
+    const top = rect.top - tipRect.height - 6 < 8 ? rect.bottom + 6 : rect.top - tipRect.height - 6;
+    iconTip.style.left = `${left}px`;
+    iconTip.style.top = `${top}px`;
+  });
+  els.iconGrid.addEventListener('mouseleave', hideIconTip);
+  els.iconGrid.addEventListener('focusin', hideIconTip);
+  els.iconGrid.addEventListener('scroll', hideIconTip, true);
+  els.iconsModal.addEventListener('close', hideIconTip);
+
+  els.iconGrid.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.dataset.action === 'rename') e.target.blur();
+  });
+
+  els.iconGrid.addEventListener('focusout', (e) => {
+    if (e.target.dataset.action !== 'rename') return;
+    const card = e.target.closest('[data-icon-id]');
+    const id = Number(card.dataset.iconId);
+    const current = state.images.find((i) => i.id === id);
+    const title = e.target.value.trim();
+    if (!current || title === current.title) return;
+    if (!title) { e.target.value = current.title; return; }
+    guarded(async () => {
+      const updated = await api.renameImage(id, title);
+      current.title = updated.title;
+      e.target.value = updated.title;
+    }, els.iconsError);
   });
 
   els.addStep.addEventListener('click', () => {
@@ -590,22 +811,18 @@ function showStage() {
   els.laterUpdate.addEventListener('click', async () => renderUpdateStatus(await api.deferUpdate()));
   els.installUpdate.addEventListener('click', () => api.installUpdate());
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !els.modal.hidden) closeModal();
-  });
-
   /* ---------- Startup ---------- */
 
   (async function init() {
     await guarded(async () => {
       audioProxyBase = await api.getAudioProxyBase();
-      els.appVersion.textContent = `Version ${await api.getAppVersion()}`;
+      els.appVersion.textContent = `v${await api.getAppVersion()}`;
       renderUpdateStatus(await api.getUpdateStatus());
       state.schedules = await api.listSchedules();
       const saved = Number(localStorage.getItem(LAST_SCHEDULE_KEY));
-      const start = state.schedules.find((s) => s.id === saved) || state.schedules[0];
-      state.scheduleId = start ? start.id : null;
-      await loadSchedule(state.scheduleId);
-    });
+      const start = state.schedules.find((s) => s.id === saved);
+      selectSchedule(start ? start.id : null);
+      switchView('landing');
+    }, els.landingError);
   })();
 })();
