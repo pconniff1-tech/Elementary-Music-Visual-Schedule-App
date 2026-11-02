@@ -267,10 +267,38 @@ function showStage() {
 
   /* ---------- Views, dialogs, and builder ---------- */
 
-  function showError(message, target = els.modalError) {
-    target.textContent = message || '';
+  const createTrashIcon = () => {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2.2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13h10l1-13', 'M10 11v6', 'M14 11v6'].forEach((d) => {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', d);
+      svg.append(path);
+    });
+    return svg;
+  };
+
+  const showError = (message, target = els.modalError) => {
+    target.replaceChildren();
     target.hidden = !message;
-  }
+    if (!message) return;
+    const text = document.createElement('span');
+    text.textContent = message;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'error-close';
+    close.textContent = '✕';
+    close.setAttribute('aria-label', 'Dismiss message');
+    close.addEventListener('click', () => showError('', target));
+    target.append(text, close);
+  };
 
   async function guarded(fn, errorEl = els.modalError) {
     try {
@@ -688,7 +716,7 @@ function showStage() {
       trash.type = 'button';
       trash.className = 'danger btn-trash';
       trash.dataset.action = 'delete';
-      trash.textContent = '🗑️';
+      trash.append(createTrashIcon());
       trash.setAttribute('aria-label', `Delete ${icon.title}`);
 
       card.append(img, name, trash);
